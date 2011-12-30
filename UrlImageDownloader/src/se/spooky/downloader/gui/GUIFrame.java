@@ -32,7 +32,7 @@ import se.spooky.downloader.util.Util;
  * do not automaticly redirect to mainPanel make a done button to let the user se the log
  * resizeable?
  * A queue of url to make it automaticle jump to next if it is still running
- * 
+ * check 404
  */
 public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainPanelInterface {
 	private static final long serialVersionUID = 1L;
