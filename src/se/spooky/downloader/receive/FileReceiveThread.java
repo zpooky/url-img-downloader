@@ -6,31 +6,35 @@ import se.spooky.downloader.interfce.GUIFrameInterface;
 import se.spooky.downloader.url.Direction;
 import se.spooky.downloader.url.UrlHandler;
 
-public class FileReceiveThread extends Thread implements Runnable {
+public class FileReceiveThread extends BaseFileReceiveThread implements Runnable {
 	private URL mURL;
-	private Direction mDirection;
 	private String mRootFolder;
 	private GUIFrameInterface mGUIFrame;
 
 	public FileReceiveThread(GUIFrameInterface frame, URL url, Direction direction, String rootFolder) {
+		super(direction);
 		mGUIFrame = frame;
 		mURL = url;
-		mDirection = direction;
 		mRootFolder = rootFolder;
 	}
 
 	@Override
-	public void run() {
+	protected void life() {
 		boolean next = true;
 		int v = 0;
 		try {
 			UrlHandler urlHandler = new UrlHandler(mURL);
 			while (next && !isInterrupted()) {
 				try {
-					FileReceiver.handleImage(mURL, mRootFolder);
+					/*
+					 * if (!Util.isOk(mURL)) {
+					 * throw new FileReceiveException("", "URL is 404", true);
+					 * }
+					 */
+					FileDownloader.handleImage(mURL, mRootFolder);
 					mURL = getNext(urlHandler);
 					v = 0;
-					mGUIFrame.addLogMessage(String.format("Image %s Downloaded", FileReceiver.getFilename(mURL)));
+					mGUIFrame.addLogMessage(String.format("Image %s Downloaded", FileDownloader.getFilename(mURL)));
 				} catch (FileReceiveException e) {
 					mGUIFrame.addLogMessage(e.getMessage());
 					if (e.isCorrectNeeded()) {
@@ -48,11 +52,11 @@ public class FileReceiveThread extends Thread implements Runnable {
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
-		mGUIFrame.setFileReceiveDone(mDirection);
+		mGUIFrame.setFileReceiveDone(getDirection());
 	}
 
 	public URL getNext(UrlHandler urlHandler) throws MalformedURLException, FileReceiveException {
-		if (mDirection == Direction.NEXT) {
+		if (getDirection() == Direction.NEXT) {
 			return urlHandler.next();
 		}
 		return urlHandler.prev();

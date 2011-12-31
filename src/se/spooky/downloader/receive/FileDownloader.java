@@ -3,10 +3,13 @@ package se.spooky.downloader.receive;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.URL;
+import java.net.URLConnection;
 import javax.imageio.ImageIO;
 
-public class FileReceiver {
-	public FileReceiver() {
+public class FileDownloader {
+	private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:9.0) Gecko/20100101 Firefox/9.0";
+
+	public FileDownloader() {
 	}
 
 	// private static String getHTTPRequest(URL url) {
@@ -29,18 +32,22 @@ public class FileReceiver {
 	public static void handleImage(URL url, String rootFolder) throws FileReceiveException {
 		File outputfile = null;
 		try {
-			outputfile = new File(rootFolder + getFilename(url));
+			// System.out.println(url);
+			outputfile = new File(String.format("%s%s", rootFolder, getFilename(url)));
+			// System.out.println(outputfile);
 			if (outputfile.isFile()) {
-				throw new FileReceiveException(outputfile.getName(), String.format("file %s allready exists", outputfile.getName()), false);
+				throw new FileReceiveException(outputfile.getName(), String.format("File %s allready exists.", outputfile.getName()), false);
 			}
-			BufferedImage bufferedImage = ImageIO.read(url);
+			URLConnection openConnection = url.openConnection();
+			openConnection.setRequestProperty("User-Agent", USER_AGENT);
+			BufferedImage bufferedImage = ImageIO.read(openConnection.getInputStream());
 			if (bufferedImage == null) {
-				// return;
-				throw new FileReceiveException(outputfile.getName(), String.format("Unknow Exception for file %s", outputfile.getName()), false);
+				throw new FileReceiveException(outputfile.getName(), String.format("Unknow Exception for file %s.", outputfile.getName()), false);
 			}
 			ImageIO.write(bufferedImage, getFiletype(url), outputfile);
 		} catch (Exception e) {
-			throw new FileReceiveException(outputfile.getName(), String.format("file %s was not found", outputfile.getName()), true);
+			// e.printStackTrace();
+			throw new FileReceiveException(outputfile.getName(), String.format("File %s was not found.", outputfile.getName()), true);
 		}
 		/*
 		 * URLConnection connection = url.openConnection();

@@ -11,13 +11,14 @@ public class FileReceiveException extends Exception {
 		mFileName = fileName;
 		mMessage = message;
 		mCorrect = correct;
+		mDone = false;
 	}
 
 	public FileReceiveException(String message, boolean done) {
 		mFileName = "";
 		mMessage = message;
 		mCorrect = false;
-		mDone = true;
+		mDone = done;
 	}
 
 	public boolean isCorrectNeeded() {

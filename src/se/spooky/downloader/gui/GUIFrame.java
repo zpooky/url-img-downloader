@@ -18,7 +18,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import se.spooky.downloader.interfce.GUIFrameInterface;
 import se.spooky.downloader.interfce.GUIFrameMainPanelInterface;
-import se.spooky.downloader.receive.FileReceiveThread;
+import se.spooky.downloader.receive.ThreadHandler;
 import se.spooky.downloader.url.Direction;
 import se.spooky.downloader.util.Unique;
 import se.spooky.downloader.util.Util;
@@ -37,12 +37,10 @@ import se.spooky.downloader.util.Util;
 public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainPanelInterface {
 	private static final long serialVersionUID = 1L;
 	private static final String IMAGE_ROOT = "img/";
-	private boolean[] mThreadDone;
 	private SearchProgressPanel mSarchProgressPanel;
 	private File mRootFolder;
 	private URL mUrl;
 	private JButton mDoneAbortButton;
-	private FileReceiveThread[] mFileReceiveThread;
 
 	private class MainPanel extends JPanel {
 		private GUIFrameMainPanelInterface mGuiFrame;
@@ -50,7 +48,6 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 
 		public MainPanel(GUIFrameMainPanelInterface guiFrame) {
 			mGuiFrame = guiFrame;
-			mFileReceiveThread = new FileReceiveThread[2];
 			setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 			setLayout(new GridLayout(5, 4, 5, 5));
 			init();
@@ -105,16 +102,7 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 			mDoneAbortButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					try {
-						mFileReceiveThread[0].interrupt();
-					} catch (Exception e1) {
-						e1.printStackTrace();
-					}
-					try {
-						mFileReceiveThread[1].interrupt();
-					} catch (Exception e1) {
-						e1.printStackTrace();
-					}
+					ThreadHandler.getInstance(GUIFrame.this).killAll();
 					getContentPane().removeAll();
 					mSarchProgressPanel.revalidate();
 					gotoMain();
@@ -124,8 +112,31 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 			final JLabel status = new JLabel();
 			status.setText("Dl from: " + mUrl.getHost());
 			add(status);
-			mProgressLog = new TextArea(20, 20);
+			mProgressLog = new TextArea(2, 1);
 			add(mProgressLog);
+			JPanel jPanel = new JPanel();
+			jPanel.setLayout(new GridLayout(0, 5));
+			final JTextField addURLText = new JTextField(3);
+			jPanel.add(addURLText);
+			final JButton addURLButton = new JButton("+");
+			addURLButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					String text = addURLText.getText();
+					addURLText.setText("");
+					URL url;
+					try {
+						url = new URL(text);
+						ThreadHandler.getInstance(GUIFrame.this).handle(Direction.NEXT, url, getRootFolder(url));
+						ThreadHandler.getInstance(GUIFrame.this).handle(Direction.PREV, url, getRootFolder(url));
+					} catch (MalformedURLException e) {
+						e.printStackTrace();
+					}
+				}
+			});
+			// addUrl.setPreferredSize(new Dimension(10, 10));
+			jPanel.add(addURLButton);
+			add(jPanel);
 		}
 
 		public void addLogMessage(String message) {
@@ -144,13 +155,6 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 	}
 
 	public void init() {
-		File file = new File(IMAGE_ROOT);
-		if (!file.isDirectory()) {
-			file.mkdir();
-		}
-		mThreadDone = new boolean[2];
-		mThreadDone[0] = false;
-		mThreadDone[1] = false;
 		MainPanel mainPanel = new MainPanel(this);
 		getContentPane().add(mainPanel);
 		mainPanel.revalidate();
@@ -179,7 +183,7 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 		mSarchProgressPanel = new SearchProgressPanel();
 		getContentPane().add(mSarchProgressPanel);
 		mSarchProgressPanel.revalidate();
-		String rootFolder = String.format("%s%s%s", IMAGE_ROOT, url.getHost(), File.separator);
+		String rootFolder = getRootFolder(url);
 		mRootFolder = new File(rootFolder);
 		mRootFolder.mkdir();
 		try {
@@ -187,16 +191,14 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		mFileReceiveThread[0] = new FileReceiveThread(this, url, Direction.NEXT, rootFolder);
-		mFileReceiveThread[0].start();
-		mFileReceiveThread[1] = new FileReceiveThread(this, url, Direction.PREV, rootFolder);
-		mFileReceiveThread[1].start();
+		ThreadHandler fileReceiveThreadHandler = ThreadHandler.getInstance(GUIFrame.this);
+		fileReceiveThreadHandler.handle(Direction.NEXT, url, rootFolder);
+		fileReceiveThreadHandler.handle(Direction.PREV, url, rootFolder);
 	}
 
 	@Override
 	public synchronized void setFileReceiveDone(Direction direction) {
-		mThreadDone[direction.getId()] = true;
-		if (mThreadDone[0] && mThreadDone[1]) {
+		if (ThreadHandler.getInstance(GUIFrame.this).isDone()) {
 			done();
 		}
 	}
@@ -206,7 +208,27 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 		mSarchProgressPanel.addLogMessage(message);
 	}
 
+	private static String getRootFolder(URL url) {
+		return String.format("%s%s%s", IMAGE_ROOT, url.getHost(), File.separator);
+	}
+
 	public static void main(String[] args) {
+		/*
+		 * try {
+		 * System.out.println(Util.isOk(new URL("http://localhost/test/img/02.bmp")) ? "true" : "false");
+		 * } catch (MalformedURLException e) {
+		 * e.printStackTrace();
+		 * }
+		 */
+		/*
+		 * System.setProperty("http.agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:9.0) Gecko/20100101 Firefox/9.0");
+		 * Properties properties2 = System.getProperties();
+		 * Iterator<Entry<Object, Object>> iterator = properties2.entrySet().iterator();
+		 * while (iterator.hasNext()) {
+		 * Entry<Object, Object> next = iterator.next();
+		 * System.out.println(((String) next.getKey()) + " " + ((String) next.getValue()));
+		 * }
+		 */
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
