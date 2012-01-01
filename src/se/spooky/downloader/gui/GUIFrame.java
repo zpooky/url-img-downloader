@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -36,7 +38,8 @@ import se.spooky.downloader.util.Util;
  */
 public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainPanelInterface {
 	private static final long serialVersionUID = 1L;
-	private static final String IMAGE_ROOT = "img/";
+	private static final Pattern FOLDER_URL_REPLACE = Pattern.compile("[\"*/:<>?\\|]");
+	private static final String IMAGE_ROOT = "img" + File.separator;
 	private SearchProgressPanel mSarchProgressPanel;
 	private File mRootFolder;
 	private URL mUrl;
@@ -209,7 +212,22 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 	}
 
 	private static String getRootFolder(URL url) {
-		return String.format("%s%s%s", IMAGE_ROOT, url.getHost(), File.separator);
+		String folderAppend = url.getPath();
+		int lastIndexPath = folderAppend.lastIndexOf("/");
+		if (lastIndexPath != -1) {
+			folderAppend = folderAppend.substring(0, lastIndexPath);
+		}
+		Matcher matcher = FOLDER_URL_REPLACE.matcher(folderAppend);
+		folderAppend = matcher.replaceAll(".");
+		String host = url.getHost();
+		if (host.substring(0, 4).equalsIgnoreCase("www.")) {
+			host = host.substring(4);
+		}
+		int lastIndexHost = host.lastIndexOf(".");
+		if (lastIndexHost != -1) {
+			host = host.substring(0, lastIndexHost);
+		}
+		return String.format("%s%s%s%s", IMAGE_ROOT, host, folderAppend, File.separator);
 	}
 
 	public static void main(String[] args) {
