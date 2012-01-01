@@ -52,7 +52,7 @@ public class FileReceiveThread extends BaseFileReceiveThread implements Runnable
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
-		mGUIFrame.setFileReceiveDone(getDirection());
+		mGUIFrame.updateDoneButton();
 	}
 
 	public URL getNext(UrlHandler urlHandler) throws MalformedURLException, FileReceiveException {

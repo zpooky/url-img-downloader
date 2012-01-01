@@ -132,6 +132,7 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 						url = new URL(text);
 						ThreadHandler.getInstance(GUIFrame.this).handle(Direction.NEXT, url, getRootFolder(url));
 						ThreadHandler.getInstance(GUIFrame.this).handle(Direction.PREV, url, getRootFolder(url));
+						updateDoneButton();
 					} catch (MalformedURLException e) {
 						e.printStackTrace();
 					}
@@ -200,7 +201,7 @@ public class GUIFrame extends JFrame implements GUIFrameInterface, GUIFrameMainP
 	}
 
 	@Override
-	public synchronized void setFileReceiveDone(Direction direction) {
+	public synchronized void updateDoneButton() {
 		if (ThreadHandler.getInstance(GUIFrame.this).isDone()) {
 			done();
 		}
